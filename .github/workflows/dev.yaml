@@ -6,7 +6,7 @@ on:
       reminder:
         description: "🔴 This workflow ONLY deploys the dev branch to the dev environment"
         required: false
-        default: "Read before deploying"
+        default: "CHOOSE DEV"
 
 jobs:
   deploy:
