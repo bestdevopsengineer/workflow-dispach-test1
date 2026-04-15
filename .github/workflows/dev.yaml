@@ -3,6 +3,10 @@ name: Dev Deploy
 on:
   workflow_dispatch:
     inputs:
+      reminder:
+        description: "🔴 IMPORTANT: Make sure to choose the correct branch (qa → qa, dev → dev, prod → prod)"
+        required: false
+        default: "🔴 Read this before deploying"
       environment:
         type: choice
         description: "Select deployment environment (auto = detect from branch)"
