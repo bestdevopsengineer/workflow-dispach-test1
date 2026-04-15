@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       reminder:
-        description: "🔴 This workflow ONLY deploys the qa branch to the qa environment"
+        description: "🔴 This workflow deploys the qa branch to the qa environment ONLY IF"
         required: false
-        default: "Read before deploying"
+        default: "Branch = qa"
 
 jobs:
   deploy:
