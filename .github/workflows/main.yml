@@ -2,12 +2,6 @@ name: main
 
 on:
   workflow_dispatch:
-    inputs:
-      reminder:
-        description: "🔴 IMPORTANT: Make sure to choose the correct branch (qa → qa, dev → dev, prod → prod)"
-        required: false
-        default: "🔴 Read this before deploying"
-
 
 jobs:
   deploy:
