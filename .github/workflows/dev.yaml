@@ -7,9 +7,10 @@ on:
         type: choice
         description: "Select deployment environment"
         options:
+          - dev
           - qa
           - prod
-        default: qa
+        default: dev
 
       branch:
         description: "Branch to deploy (leave empty to use current branch)"
