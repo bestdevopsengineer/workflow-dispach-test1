@@ -13,6 +13,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: echo
+        run: echo "main"
       - name: Determine branch
         id: vars
         run: |
