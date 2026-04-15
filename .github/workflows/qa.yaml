@@ -1,4 +1,4 @@
-name: Qa Deploy
+name: QA Deploy
 
 on:
   workflow_dispatch:
@@ -16,25 +16,25 @@ jobs:
       - name: Validate workflow branch
         run: |
           if [[ "${{ github.ref_name }}" != "qa" ]]; then
-            echo "ERROR: Dev Deploy workflow must be run from the dev branch"
+            echo "ERROR: QA Deploy workflow must be run from the qa branch"
             exit 1
           fi
 
       - name: Set fixed values
         id: fixed
         run: |
-          echo "branch=dev" >> $GITHUB_OUTPUT
-          echo "environment=dev" >> $GITHUB_OUTPUT
+          echo "branch=qa" >> $GITHUB_OUTPUT
+          echo "environment=qa" >> $GITHUB_OUTPUT
 
       - name: Show deployment details
         run: |
           echo "🚀 Deploying branch: qa"
           echo "🌍 Target environment: qa"
 
-      - name: Checkout dev branch
+      - name: Checkout qa branch
         uses: actions/checkout@v4
         with:
-          ref: dev
+          ref: qa
 
       - name: Deploy application
         run: |
