@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       reminder:
-        description: "🔴 This workflow ONLY deploys the dev branch to the dev environment"
+        description: "🔴 This workflow ONLY deploys the dev branch to the dev environment ONLY IF"
         required: false
-        default: "Choose DEV"
+        default: "YOU CHOOSE DEV BRANCH"
 
 jobs:
   deploy:
