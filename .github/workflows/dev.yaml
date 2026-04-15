@@ -1,8 +1,18 @@
-name: dev deploy
+name: dev Deploy
 
 on:
   workflow_dispatch:
     inputs:
+      environment:
+        type: choice
+        description: "Select deployment environment (leave as auto to detect from branch)"
+        options:
+          - auto
+          - qa
+          - dev
+          - prod
+        default: auto
+
       branch:
         description: "Branch to deploy (leave empty to use current branch)"
         required: false
@@ -11,15 +21,45 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Determine branch
-        id: vars
+      - name: Determine branch to deploy
+        id: branch
         run: |
           if [ -z "${{ github.event.inputs.branch }}" ]; then
             echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
             echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
           fi
+
+      - name: Determine environment
+        id: env
+        run: |
+          INPUT_ENV="${{ github.event.inputs.environment }}"
+          BRANCH="${{ steps.branch.outputs.branch }}"
+
+          # If user selected a specific environment, use it
+          if [[ "$INPUT_ENV" != "auto" ]]; then
+            echo "environment=$INPUT_ENV" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Auto-detect environment based on branch
+          case "$BRANCH" in
+            qa|qa/*)
+              echo "environment=qa" >> $GITHUB_OUTPUT
+              ;;
+            dev|develop|dev/*)
+              echo "environment=dev" >> $GITHUB_OUTPUT
+              ;;
+            main|prod|production|prod/*)
+              echo "environment=prod" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "ERROR: Cannot auto-detect environment for branch '$BRANCH'"
+              exit 1
+              ;;
+          esac
 
       - name: Validate branch/environment combination
         run: |
@@ -30,36 +70,32 @@ jobs:
 
           case "$ENV" in
             qa)
-              if [[ "$BRANCH" != "qa" && "$BRANCH" != qa/* ]]; then
-                echo "ERROR: Only the 'qa' branch can deploy to QA."
-                exit 1
-              fi
+              [[ "$BRANCH" == "qa" || "$BRANCH" == qa/* ]] || { echo "ERROR: Only 'qa' branch can deploy to QA"; exit 1; }
               ;;
             dev)
-              if [[ "$BRANCH" != "dev" && "$BRANCH" != "develop" && "$BRANCH" != dev/* ]]; then
-                echo "ERROR: Only 'dev' or 'develop' branches can deploy to DEV."
-                exit 1
-              fi
+              [[ "$BRANCH" == "dev" || "$BRANCH" == "develop" || "$BRANCH" == dev/* ]] || { echo "ERROR: Only 'dev' or 'develop' branches can deploy to DEV"; exit 1; }
               ;;
             prod)
-              if [[ "$BRANCH" != "main" && "$BRANCH" != "prod" && "$BRANCH" != "production" ]]; then
-                echo "ERROR: Only 'main' or 'prod' branches can deploy to PROD."
-                exit 1
-              fi
+              [[ "$BRANCH" == "main" || "$BRANCH" == "prod" || "$BRANCH" == "production" ]] || { echo "ERROR: Only 'main' or 'prod' branches can deploy to PROD"; exit 1; }
               ;;
             *)
-              echo "ERROR: Unknown environment: $ENV"
+              echo "ERROR: Unknown environment '$ENV'"
               exit 1
               ;;
           esac
 
           echo "Validation passed."
 
-      - name: Checkout branch
+      - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.vars.outputs.branch }}
+          ref: ${{ steps.branch.outputs.branch }}
 
-      - name: Deploy
+      - name: Show deployment details
         run: |
-          echo "Deploying branch: ${{ steps.vars.outputs.branch }}"
+          echo "Environment: ${{ steps.env.outputs.environment }}"
+          echo "Branch: ${{ steps.branch.outputs.branch }}"
+
+      - name: Deploy application
+        run: |
+          echo "Deploying ${{ steps.branch.outputs.branch }} to ${{ steps.env.outputs.environment }}"
