@@ -35,6 +35,10 @@ jobs:
           else
             echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
           fi
+      - name: Show deployment details
+        run: |
+          echo "🚀 Deploying branch: ${{ steps.branch.outputs.branch }}"
+          echo "🌍 Target environment: ${{ steps.env.outputs.environment }}"
 
       - name: Determine environment
         id: env
