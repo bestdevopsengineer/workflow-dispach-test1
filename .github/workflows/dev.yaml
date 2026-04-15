@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       reminder:
-        description: "🔴 This workflow ONLY deploys the dev branch to the dev environment ONLY IF"
+        description: "🔴 This workflow deploys the dev branch to the dev environment ONLY IF"
         required: false
         default: "Branch = dev"
 
