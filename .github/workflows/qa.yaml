@@ -1,22 +1,35 @@
-name: Qa Deploy
+name: QA Deploy
 
 on:
   workflow_dispatch:
     inputs:
+      reminder:
+        description: "🔴 IMPORTANT: Make sure to choose the correct branch (qa → qa, dev → dev, prod → prod)"
+        required: false
+        default: "🔴 Read this before deploying"
+        
+      branch:
+        type: choice
+        description: "Branch to deploy "
+        options:
+          - dev
+          - qa
+          - prod
+        default: qa  
+   
+        
       environment:
         type: choice
         description: "Select deployment environment (auto = detect from branch)"
         options:
-          - auto
-          - qa
           - dev
+          - qa
           - prod
-        default: auto
+        default: qa
 
-      branch:
-        description: "Branch to deploy (leave empty to use current branch)"
-        required: false
-        default: ""
+
+
+      
 
 jobs:
   deploy:
@@ -31,6 +44,10 @@ jobs:
           else
             echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
           fi
+      - name: Show deployment details
+        run: |
+          echo "🚀 Deploying branch: ${{ steps.branch.outputs.branch }}"
+          echo "🌍 Target environment: ${{ steps.env.outputs.environment }}"
       - name: Determine environment
         id: env
         run: |
