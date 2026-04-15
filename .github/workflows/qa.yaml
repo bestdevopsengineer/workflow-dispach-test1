@@ -1,31 +1,108 @@
-name: qa deploy
+name: QA Deploy
 
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: "Branch to deploy (leave empty to use current branch)"
+      reminder:
+        description: "🔴 IMPORTANT: Make sure to choose the correct branch (qa → qa, dev → dev, prod → prod)"
         required: false
-        default: ""
+        default: "🔴 Read this before deploying"
+        
+      branch:
+        type: choice
+        description: "Branch to deploy "
+        options:
+          - dev
+          - qa
+          - prod
+        default: qa  
+   
+        
+      environment:
+        type: choice
+        description: "Select deployment environment (auto = detect from branch)"
+        options:
+          - dev
+          - qa
+          - prod
+        default: qa
+
+
+
+      
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Determine branch
-        id: vars
+      - name: Determine branch to deploy
+        id: branch
         run: |
           if [ -z "${{ github.event.inputs.branch }}" ]; then
             echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
             echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
           fi
-
-      - name: Checkout branch
+      - name: Show deployment details
+        run: |
+          echo "🚀 Deploying branch: ${{ steps.branch.outputs.branch }}"
+          echo "🌍 Target environment: ${{ steps.env.outputs.environment }}"
+      - name: Determine environment
+        id: env
+        run: |
+          INPUT_ENV="${{ github.event.inputs.environment }}"
+          BRANCH="${{ steps.branch.outputs.branch }}"
+          # If user selected a specific environment, use it
+          if [[ "$INPUT_ENV" != "auto" ]]; then
+            echo "environment=$INPUT_ENV" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          # Auto-detect environment based on branch name
+          case "$BRANCH" in
+            qa)
+              echo "environment=qa" >> $GITHUB_OUTPUT
+              ;;
+            dev)
+              echo "environment=dev" >> $GITHUB_OUTPUT
+              ;;
+            prod)
+              echo "environment=prod" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "ERROR: Cannot auto-detect environment for branch '$BRANCH'"
+              exit 1
+              ;;
+          esac
+      - name: Validate branch/environment combination
+        run: |
+          BRANCH="${{ steps.branch.outputs.branch }}"
+          ENV="${{ steps.env.outputs.environment }}"
+          echo "Validating: branch=$BRANCH, environment=$ENV"
+          # Strict 1:1 mapping
+          if [[ "$BRANCH" == "qa" && "$ENV" == "qa" ]]; then
+            echo "QA → QA allowed"
+            exit 0
+          fi
+          if [[ "$BRANCH" == "dev" && "$ENV" == "dev" ]]; then
+            echo "DEV → DEV allowed"
+            exit 0
+          fi
+          if [[ "$BRANCH" == "prod" && "$ENV" == "prod" ]]; then
+            echo "PROD → PROD allowed"
+            exit 0
+          fi
+          echo "ERROR: Deployment blocked. Branch '$BRANCH' cannot deploy to environment '$ENV'"
+          exit 1
+      - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.vars.outputs.branch }}
+          ref: ${{ steps.branch.outputs.branch }}
 
-      - name: Deploy
+      - name: Show deployment details
         run: |
-          echo "Deploying branch: ${{ steps.vars.outputs.branch }}"
+          echo "Environment: ${{ steps.env.outputs.environment }}"
+          echo "Branch: ${{ steps.branch.outputs.branch }}"
+      - name: Deploy application
+        run: |
+          echo "Deploying ${{ steps.branch.outputs.branch }} to ${{ steps.env.outputs.environment }}"
