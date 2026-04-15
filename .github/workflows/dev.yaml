@@ -112,6 +112,6 @@ jobs:
           echo "Environment: ${{ steps.env.outputs.environment }}"
           echo "Branch: ${{ steps.branch.outputs.branch }}"
 
-      #- name: Deploy application
-       # run: |
-        #  echo "Deploying ${{ steps.branch.outputs.branch }} to ${{ steps.env.outputs.environment }}"
+      - name: Deploy application
+        run: |
+          echo "Deploying ${{ steps.branch.outputs.branch }} to ${{ steps.env.outputs.environment }}"
