@@ -1,8 +1,16 @@
-name: dev deploy
+name: Deploy
 
 on:
   workflow_dispatch:
     inputs:
+      environment:
+        type: choice
+        description: "Select deployment environment"
+        options:
+          - qa
+          - prod
+        default: qa
+
       branch:
         description: "Branch to deploy (leave empty to use current branch)"
         required: false
@@ -11,8 +19,10 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
     steps:
-      - name: Determine branch
+      - name: Determine branch to deploy
         id: vars
         run: |
           if [ -z "${{ github.event.inputs.branch }}" ]; then
@@ -21,11 +31,17 @@ jobs:
             echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Checkout branch
+      - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.vars.outputs.branch }}
 
-      - name: Deploy
+      - name: Show deployment details
         run: |
-          echo "Deploying branch: ${{ steps.vars.outputs.branch }}"
+          echo "Environment: ${{ github.event.inputs.environment }}"
+          echo "Branch: ${{ steps.vars.outputs.branch }}"
+
+      # Add your real deployment steps here
+      - name: Deploy application
+        run: |
+          echo "Deploying ${{ steps.vars.outputs.branch }} to ${{ github.event.inputs.environment }}"
