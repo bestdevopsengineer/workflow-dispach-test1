@@ -1,16 +1,17 @@
-name: qa Deploy
+name: Qa Deploy
 
 on:
   workflow_dispatch:
     inputs:
       environment:
         type: choice
-        description: "Select deployment environment (leave empty to auto-detect)"
+        description: "Select deployment environment (auto = detect from branch)"
         options:
+          - auto
           - qa
           - dev
           - prod
-        default: ""
+        default: auto
 
       branch:
         description: "Branch to deploy (leave empty to use current branch)"
@@ -30,32 +31,52 @@ jobs:
           else
             echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
           fi
-
       - name: Determine environment
         id: env
         run: |
-          # If user selected an environment, use it
-          if [ -n "${{ github.event.inputs.environment }}" ]; then
-            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          INPUT_ENV="${{ github.event.inputs.environment }}"
+          BRANCH="${{ steps.branch.outputs.branch }}"
+          # If user selected a specific environment, use it
+          if [[ "$INPUT_ENV" != "auto" ]]; then
+            echo "environment=$INPUT_ENV" >> $GITHUB_OUTPUT
             exit 0
           fi
-
           # Auto-detect environment based on branch name
-          case "${{ steps.branch.outputs.branch }}" in
-            qa|qa/*)
+          case "$BRANCH" in
+            qa)
               echo "environment=qa" >> $GITHUB_OUTPUT
               ;;
-            dev|develop|dev/*)
+            dev)
               echo "environment=dev" >> $GITHUB_OUTPUT
               ;;
-            main|prod|production|prod/*)
+            prod)
               echo "environment=prod" >> $GITHUB_OUTPUT
               ;;
             *)
-              echo "environment=qa" >> $GITHUB_OUTPUT
+              echo "ERROR: Cannot auto-detect environment for branch '$BRANCH'"
+              exit 1
               ;;
           esac
-
+      - name: Validate branch/environment combination
+        run: |
+          BRANCH="${{ steps.branch.outputs.branch }}"
+          ENV="${{ steps.env.outputs.environment }}"
+          echo "Validating: branch=$BRANCH, environment=$ENV"
+          # Strict 1:1 mapping
+          if [[ "$BRANCH" == "qa" && "$ENV" == "qa" ]]; then
+            echo "QA → QA allowed"
+            exit 0
+          fi
+          if [[ "$BRANCH" == "dev" && "$ENV" == "dev" ]]; then
+            echo "DEV → DEV allowed"
+            exit 0
+          fi
+          if [[ "$BRANCH" == "prod" && "$ENV" == "prod" ]]; then
+            echo "PROD → PROD allowed"
+            exit 0
+          fi
+          echo "ERROR: Deployment blocked. Branch '$BRANCH' cannot deploy to environment '$ENV'"
+          exit 1
       - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
@@ -65,7 +86,6 @@ jobs:
         run: |
           echo "Environment: ${{ steps.env.outputs.environment }}"
           echo "Branch: ${{ steps.branch.outputs.branch }}"
-
       - name: Deploy application
         run: |
           echo "Deploying ${{ steps.branch.outputs.branch }} to ${{ steps.env.outputs.environment }}"
