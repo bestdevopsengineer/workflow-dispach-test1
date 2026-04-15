@@ -1,22 +1,33 @@
-name: dev Deploy
+name: Dev Deploy
 
 on:
   workflow_dispatch:
     inputs:
+      reminder:
+        description: "🔴 IMPORTANT: Make sure to choose the correct branch (qa → qa, dev → dev, prod → prod)"
+        required: false
+        default: "🔴 Read this before deploying"
+        
+      branch:
+        type: choice
+        description: "Branch to deploy "
+        options:
+          - dev
+          - qa
+          - prod
+   
+        
       environment:
         type: choice
-        description: "Select deployment environment (leave as auto to detect from branch)"
+        description: "Select deployment environment (auto = detect from branch)"
         options:
-          - auto
-          - qa
           - dev
+          - qa
           - prod
-        default: auto
 
-      branch:
-        description: "Branch to deploy (leave empty to use current branch)"
-        required: false
-        default: ""
+
+
+      
 
 jobs:
   deploy:
@@ -31,6 +42,10 @@ jobs:
           else
             echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
           fi
+      - name: Show deployment details
+        run: |
+          echo "🚀 Deploying branch: ${{ steps.branch.outputs.branch }}"
+          echo "🌍 Target environment: ${{ steps.env.outputs.environment }}"
 
       - name: Determine environment
         id: env
@@ -44,15 +59,15 @@ jobs:
             exit 0
           fi
 
-          # Auto-detect environment based on branch
+          # Auto-detect environment based on branch name
           case "$BRANCH" in
-            qa|qa/*)
+            qa)
               echo "environment=qa" >> $GITHUB_OUTPUT
               ;;
-            dev|develop|dev/*)
+            dev)
               echo "environment=dev" >> $GITHUB_OUTPUT
               ;;
-            main|prod|production|prod/*)
+            prod)
               echo "environment=prod" >> $GITHUB_OUTPUT
               ;;
             *)
@@ -68,23 +83,24 @@ jobs:
 
           echo "Validating: branch=$BRANCH, environment=$ENV"
 
-          case "$ENV" in
-            qa)
-              [[ "$BRANCH" == "qa" || "$BRANCH" == qa/* ]] || { echo "ERROR: Only 'qa' branch can deploy to QA"; exit 1; }
-              ;;
-            dev)
-              [[ "$BRANCH" == "dev" || "$BRANCH" == "develop" || "$BRANCH" == dev/* ]] || { echo "ERROR: Only 'dev' or 'develop' branches can deploy to DEV"; exit 1; }
-              ;;
-            prod)
-              [[ "$BRANCH" == "main" || "$BRANCH" == "prod" || "$BRANCH" == "production" ]] || { echo "ERROR: Only 'main' or 'prod' branches can deploy to PROD"; exit 1; }
-              ;;
-            *)
-              echo "ERROR: Unknown environment '$ENV'"
-              exit 1
-              ;;
-          esac
+          # Strict 1:1 mapping
+          if [[ "$BRANCH" == "qa" && "$ENV" == "qa" ]]; then
+            echo "QA → QA allowed"
+            exit 0
+          fi
 
-          echo "Validation passed."
+          if [[ "$BRANCH" == "dev" && "$ENV" == "dev" ]]; then
+            echo "DEV → DEV allowed"
+            exit 0
+          fi
+
+          if [[ "$BRANCH" == "prod" && "$ENV" == "prod" ]]; then
+            echo "PROD → PROD allowed"
+            exit 0
+          fi
+
+          echo "ERROR: Deployment blocked. Branch '$BRANCH' cannot deploy to environment '$ENV'"
+          exit 1
 
       - name: Checkout selected branch
         uses: actions/checkout@v4
