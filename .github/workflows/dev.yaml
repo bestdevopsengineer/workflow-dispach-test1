@@ -1,16 +1,16 @@
-name: dev deploy
+name: dev Deploy
 
 on:
   workflow_dispatch:
     inputs:
       environment:
         type: choice
-        description: "Select deployment environment"
+        description: "Select deployment environment (leave empty to auto-detect)"
         options:
-          - dev
           - qa
+          - dev
           - prod
-        default: dev
+        default: ""
 
       branch:
         description: "Branch to deploy (leave empty to use current branch)"
@@ -20,11 +20,10 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
 
     steps:
       - name: Determine branch to deploy
-        id: vars
+        id: branch
         run: |
           if [ -z "${{ github.event.inputs.branch }}" ]; then
             echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
@@ -32,17 +31,41 @@ jobs:
             echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Determine environment
+        id: env
+        run: |
+          # If user selected an environment, use it
+          if [ -n "${{ github.event.inputs.environment }}" ]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Auto-detect environment based on branch name
+          case "${{ steps.branch.outputs.branch }}" in
+            qa|qa/*)
+              echo "environment=qa" >> $GITHUB_OUTPUT
+              ;;
+            dev|develop|dev/*)
+              echo "environment=dev" >> $GITHUB_OUTPUT
+              ;;
+            main|prod|production|prod/*)
+              echo "environment=prod" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "environment=qa" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
       - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.vars.outputs.branch }}
+          ref: ${{ steps.branch.outputs.branch }}
 
       - name: Show deployment details
         run: |
-          echo "Environment: ${{ github.event.inputs.environment }}"
-          echo "Branch: ${{ steps.vars.outputs.branch }}"
+          echo "Environment: ${{ steps.env.outputs.environment }}"
+          echo "Branch: ${{ steps.branch.outputs.branch }}"
 
-      # Add your real deployment steps here
       - name: Deploy application
         run: |
-          echo "Deploying ${{ steps.vars.outputs.branch }} to ${{ github.event.inputs.environment }}"
+          echo "Deploying ${{ steps.branch.outputs.branch }} to ${{ steps.env.outputs.environment }}"
