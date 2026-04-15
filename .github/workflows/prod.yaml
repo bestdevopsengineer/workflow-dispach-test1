@@ -1,31 +1,41 @@
-name: prod yaml
+name: Prod Deploy
 
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: "Branch to deploy (leave empty to use current branch)"
+      reminder:
+        description: "🔴 This workflow ONLY deploys the prod branch to the prod environment"
         required: false
-        default: ""
+        default: "Read before deploying"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Determine branch
-        id: vars
+      - name: Validate workflow branch
         run: |
-          if [ -z "${{ github.event.inputs.branch }}" ]; then
-            echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          else
-            echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
+          if [[ "${{ github.ref_name }}" != "prod" ]]; then
+            echo "ERROR: Prod Deploy workflow must be run from the prod branch"
+            exit 1
           fi
 
-      - name: Checkout branch
+      - name: Set fixed values
+        id: fixed
+        run: |
+          echo "branch=prod" >> $GITHUB_OUTPUT
+          echo "environment=prod" >> $GITHUB_OUTPUT
+
+      - name: Show deployment details
+        run: |
+          echo "🚀 Deploying branch: prod"
+          echo "🌍 Target environment: prod"
+
+      - name: Checkout prod branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.vars.outputs.branch }}
+          ref: prod
 
-      - name: Deploy
+      - name: Deploy application
         run: |
-          echo "Deploying branch: ${{ steps.vars.outputs.branch }}"
+          echo "Deploying prod → prod"
