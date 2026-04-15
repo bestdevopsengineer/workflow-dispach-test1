@@ -6,7 +6,7 @@ on:
       reminder:
         description: "🔴 This workflow ONLY deploys the dev branch to the dev environment ONLY IF"
         required: false
-        default: "YOU CHOOSE DEV BRANCH"
+        default: "Branch = dev"
 
 jobs:
   deploy:
