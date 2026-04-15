@@ -21,6 +21,40 @@ jobs:
             echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Validate branch/environment combination
+        run: |
+          BRANCH="${{ steps.branch.outputs.branch }}"
+          ENV="${{ steps.env.outputs.environment }}"
+
+          echo "Validating: branch=$BRANCH, environment=$ENV"
+
+          case "$ENV" in
+            qa)
+              if [[ "$BRANCH" != "qa" && "$BRANCH" != qa/* ]]; then
+                echo "ERROR: Only the 'qa' branch can deploy to QA."
+                exit 1
+              fi
+              ;;
+            dev)
+              if [[ "$BRANCH" != "dev" && "$BRANCH" != "develop" && "$BRANCH" != dev/* ]]; then
+                echo "ERROR: Only 'dev' or 'develop' branches can deploy to DEV."
+                exit 1
+              fi
+              ;;
+            prod)
+              if [[ "$BRANCH" != "main" && "$BRANCH" != "prod" && "$BRANCH" != "production" ]]; then
+                echo "ERROR: Only 'main' or 'prod' branches can deploy to PROD."
+                exit 1
+              fi
+              ;;
+            *)
+              echo "ERROR: Unknown environment: $ENV"
+              exit 1
+              ;;
+          esac
+
+          echo "Validation passed."
+
       - name: Checkout branch
         uses: actions/checkout@v4
         with:
